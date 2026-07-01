@@ -114,7 +114,8 @@ router.get('/:id/nearby', async (req, res) => {
 // GET /api/trees/:id/qr
 router.get('/:id/qr', async (req, res) => {
   try {
-    const url = `${process.env.FRONTEND_URL}/trees/${req.params.id}`;
+    const base = (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+    const url = `${base}/trees/${req.params.id}`;
     const qr  = await QRCode.toDataURL(url, { width: 300, margin: 2 });
     res.json({ qr, url });
   } catch (err) {

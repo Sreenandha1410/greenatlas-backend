@@ -5,7 +5,7 @@ const getAll = async ({ search, area, family } = {}) => {
   let query = `
     SELECT DISTINCT ON (t.tree_id) t.*, s.tamil_name, s.general_description, s.avg_height,
         s.flowering_season, s.native_exotic, s.conservation_status,
-        NULL AS species_image_url,
+        s.image_url AS species_image_url,
         a.area_code
     FROM trees t
     LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
