@@ -17,7 +17,9 @@ const getAll = async ({ search, area, family } = {}) => {
           t.image_link
         ) AS image_link
     FROM trees t
-    LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
+    LEFT JOIN species s
+    ON t.botanical_name = (s.genus || ' ' || s.species)
+    AND t.common_name = s.common_name
     LEFT JOIN areas a ON t.area = a.area
     WHERE 1=1
   `;
@@ -61,7 +63,9 @@ const getById = async (id) => {
         s.kingdom, s.division, s.class, s.order, s.genus, s.species, s.origin,
         a.area_code
     FROM trees t
-    LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
+    LEFT JOIN species s
+    ON t.botanical_name = (s.genus || ' ' || s.species)
+    AND t.common_name = s.common_name
     LEFT JOIN areas a ON t.area = a.area
     WHERE t.tree_id = $1
   `, [id]);
