@@ -3,7 +3,9 @@ const { getPool } = require('../../config/db');
 const getAll = async ({ search, area, family } = {}) => {
   const pool = getPool();
   let query = `
-    SELECT DISTINCT ON (t.tree_id) t.*, s.tamil_name, s.general_description, s.avg_height,
+    SELECT t.tree_id, t.botanical_name, t.common_name, t.family, t.area,
+        t.latitude, t.longitude, t.age, t.notes,
+        s.tamil_name, s.general_description, s.avg_height,
         s.flowering_season, s.native_exotic, s.conservation_status,
         s.image_url AS species_image_url,
         a.area_code,
@@ -107,7 +109,14 @@ const getNearby = async (treeId, radiusMeters = 100) => {
   if (!ref) return [];
   const { rows } = await pool.query(`
     SELECT DISTINCT ON (t.tree_id) t.tree_id, t.common_name, t.botanical_name, 
-           t.family, t.area, t.image_link,
+           t.family, t.area,
+           COALESCE(
+             (SELECT ti.image_url FROM tree_images ti
+              WHERE ti.tree_id = t.tree_id
+              ORDER BY ti.is_primary DESC, ti.id ASC
+              LIMIT 1),
+             t.image_link
+           ) AS image_link,
            ROUND((point(t.longitude, t.latitude) <@> point($1, $2)) * 1609.34) AS distance_m
     FROM trees t
     WHERE t.tree_id != $3
