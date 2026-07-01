@@ -47,6 +47,15 @@ const getAll = async ({ search, area, family } = {}) => {
   }
 
   const { rows } = await pool.query(query, params);
+
+  console.log("Rows returned:", rows.length);
+
+  const duplicateIds = rows
+  .map(r => r.tree_id)
+  .filter((id, i, arr) => arr.indexOf(id) !== i);
+
+  console.log("Duplicate IDs:", [...new Set(duplicateIds)]);
+
   return rows;
 };
 
