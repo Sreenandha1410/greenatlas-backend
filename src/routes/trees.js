@@ -215,5 +215,21 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// GET /api/trees/gallery
+router.get('/gallery', async (req, res) => {
+  try {
+    const pool = require('../config/db').getPool();
+    const { rows } = await pool.query(`
+      SELECT ti.image_url, ti.caption, ti.is_primary,
+             t.tree_id, t.common_name, t.botanical_name, t.area
+      FROM tree_images ti
+      JOIN trees t ON ti.tree_id = t.tree_id
+      ORDER BY ti.is_primary DESC, ti.id ASC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
