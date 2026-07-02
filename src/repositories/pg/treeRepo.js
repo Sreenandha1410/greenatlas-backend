@@ -9,13 +9,7 @@ const getAll = async ({ search, area, family } = {}) => {
         s.flowering_season, s.native_exotic, s.conservation_status,
         s.image_url AS species_image_url,
         a.area_code,
-        COALESCE(
-          (SELECT ti.image_url FROM tree_images ti
-           WHERE ti.tree_id = t.tree_id
-           ORDER BY ti.is_primary DESC, ti.id ASC
-           LIMIT 1),
-          t.image_link
-        ) AS image_link
+        t.image_link
     FROM trees t
     LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
     LEFT JOIN areas a ON t.area = a.area
@@ -58,13 +52,7 @@ const getById = async (id) => {
         s.kingdom, s.division, s.class, s.order, s.genus, s.species, s.origin,
         s.image_url AS species_image_url,
         a.area_code,
-        COALESCE(
-          (SELECT ti.image_url FROM tree_images ti
-           WHERE ti.tree_id = t.tree_id
-           ORDER BY ti.is_primary DESC, ti.id ASC
-           LIMIT 1),
-          t.image_link
-        ) AS image_link
+        t.image_link
     FROM trees t
     LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
     LEFT JOIN areas a ON t.area = a.area
