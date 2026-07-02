@@ -15,8 +15,7 @@ const getAll = async ({ search, area, family } = {}) => {
           t.image_link
         ) AS image_link
     FROM trees t
-    LEFT JOIN species s
-    ON t.botanical_name = (s.genus || ' ' || s.species)
+    LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
     LEFT JOIN areas a ON t.area = a.area
     WHERE 1=1
   `;
@@ -42,8 +41,6 @@ const getAll = async ({ search, area, family } = {}) => {
     params.push(family);
     query += ` AND t.family = $${params.length}`;
   }
-
-  query += ` ORDER BY t.tree_id`;
 
   const { rows } = await pool.query(query, params);
   return rows;
