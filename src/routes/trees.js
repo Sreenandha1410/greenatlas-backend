@@ -100,6 +100,23 @@ router.get('/export/pdf', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/trees/gallery  ← ADD HERE (before any /:id routes)
+router.get('/gallery', async (req, res) => {
+  try {
+    const pool = require('../config/db').getPool();
+    const { rows } = await pool.query(`
+      SELECT ti.image_url, ti.caption, ti.is_primary,
+             t.tree_id, t.common_name, t.botanical_name, t.area
+      FROM tree_images ti
+      JOIN trees t ON ti.tree_id = t.tree_id
+      ORDER BY ti.is_primary DESC, ti.id ASC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/trees/:id/nearby
 router.get('/:id/nearby', async (req, res) => {
   try {
@@ -211,22 +228,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     await treeRepo.remove(req.params.id);
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-// GET /api/trees/gallery
-router.get('/gallery', async (req, res) => {
-  try {
-    const pool = require('../config/db').getPool();
-    const { rows } = await pool.query(`
-      SELECT ti.image_url, ti.caption, ti.is_primary,
-             t.tree_id, t.common_name, t.botanical_name, t.area
-      FROM tree_images ti
-      JOIN trees t ON ti.tree_id = t.tree_id
-      ORDER BY ti.is_primary DESC, ti.id ASC
-    `);
-    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
