@@ -116,6 +116,29 @@ router.get('/gallery', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// POST /api/trees/views — record a visit
+router.post('/views', async (req, res) => {
+  try {
+    const pool = require('../config/db').getPool();
+    const { path } = req.body;
+    await pool.query('INSERT INTO page_views (path) VALUES ($1)', [path || '/']);
+    const { rows } = await pool.query('SELECT COUNT(*) FROM page_views');
+    res.json({ count: parseInt(rows[0].count) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/trees/views — get total count
+router.get('/views', async (req, res) => {
+  try {
+    const pool = require('../config/db').getPool();
+    const { rows } = await pool.query('SELECT COUNT(*) FROM page_views');
+    res.json({ count: parseInt(rows[0].count) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // GET /api/trees/:id/nearby
 router.get('/:id/nearby', async (req, res) => {
