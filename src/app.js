@@ -26,6 +26,8 @@ app.use('/api/trees',   require('./routes/trees'));
 app.use('/api/species', require('./routes/species'));
 app.use('/api/areas',   require('./routes/areas'));
 app.use('/api/auth',    require('./routes/auth'));
+app.use('/api/complaints', require('./routes/complaints'));
+
 
 const PORT = process.env.PORT || 5000;
 
