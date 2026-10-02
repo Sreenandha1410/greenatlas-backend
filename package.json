@@ -23,6 +23,7 @@
     "mongoose": "^9.7.2",
     "multer": "^2.2.0",
     "multer-storage-cloudinary": "^2.2.1",
+    "mysql2": "^3.24.5",
     "pdfkit": "^0.19.1",
     "pg": "^8.22.0",
     "qrcode": "^1.5.4"
