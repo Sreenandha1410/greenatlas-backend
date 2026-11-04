@@ -210,6 +210,25 @@ const update = async (id, data) => {
 };
 
 
+// Update only the geographical coordinates of a tree
+const updateLocation = async (id, latitude, longitude) => {
+  const pool = getPool();
+
+  const { rows } = await pool.query(
+    `
+      UPDATE trees
+      SET latitude = $1,
+          longitude = $2
+      WHERE tree_id = $3
+      RETURNING tree_id, latitude, longitude
+    `,
+    [latitude, longitude, id]
+  );
+
+  return rows[0] || null;
+};
+
+
 const remove = async (id) => {
   await getPool().query(
     'DELETE FROM trees WHERE tree_id=$1',
@@ -284,7 +303,7 @@ module.exports = {
   getById,
   create,
   update,
+  updateLocation,
   remove,
-  getNearby,
-  updateLocation
+  getNearby
 };
