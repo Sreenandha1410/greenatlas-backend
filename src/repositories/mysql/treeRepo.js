@@ -320,6 +320,33 @@ const getNearby = async (treeId, radiusMeters = 100) => {
   return rows;
 };
 
+const updateLocation = async (id, latitude, longitude) => {
+  const pool = getPool();
+
+  const [result] = await pool.query(
+    `
+      UPDATE trees
+      SET latitude = ?, longitude = ?
+      WHERE tree_id = ?
+    `,
+    [latitude, longitude, id]
+  );
+
+  if (result.affectedRows === 0) {
+    return null;
+  }
+
+  const [rows] = await pool.query(
+    `SELECT tree_id, latitude, longitude
+     FROM trees
+     WHERE tree_id = ?
+     LIMIT 1`,
+    [id]
+  );
+
+  return rows[0] || null;
+};
+
 
 module.exports = {
   getAll,
@@ -327,5 +354,6 @@ module.exports = {
   create,
   update,
   remove,
-  getNearby
+  getNearby,
+  updateLocation
 };
