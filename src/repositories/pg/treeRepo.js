@@ -24,7 +24,8 @@ const getAll = async ({ search, area, family } = {}) => {
         s.o2_produced_daily,
         s.co2_absorbed_daily,
         a.area_code,
-        t.image_link
+        t.image_link,
+        s.flora_type
     FROM trees t
     LEFT JOIN species s
       ON t.botanical_name = (s.genus || ' ' || s.species)
