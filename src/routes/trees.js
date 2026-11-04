@@ -214,6 +214,53 @@ router.post('/upload', authMiddleware, upload.single('image'), async (req, res) 
   }
 });
 
+// PATCH /api/trees/:id/location
+router.patch('/:id/location', authMiddleware, async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body;
+
+    if (
+      latitude === undefined ||
+      longitude === undefined ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return res.status(400).json({
+        error: 'Invalid latitude or longitude'
+      });
+    }
+
+    const updated = await treeRepo.updateLocation(
+      req.params.id,
+      latitude,
+      longitude
+    );
+
+    if (!updated) {
+      return res.status(404).json({
+        error: 'Tree not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Tree location updated successfully',
+      tree: updated
+    });
+
+  } catch (err) {
+    console.error('Location update error:', err);
+
+    res.status(500).json({
+      error: 'Failed to update tree location'
+    });
+  }
+});
+
 // GET /api/trees/:id
 router.get('/:id', async (req, res) => {
   try {
