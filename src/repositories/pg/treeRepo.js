@@ -215,13 +215,10 @@ const updateLocation = async (id, latitude, longitude) => {
   const pool = getPool();
 
   const { rows } = await pool.query(
-    `
-      UPDATE trees
-      SET latitude = $1,
-          longitude = $2
-      WHERE tree_id = $3
-      RETURNING tree_id, latitude, longitude
-    `,
+    `UPDATE trees
+     SET latitude = $1, longitude = $2
+     WHERE tree_id = $3
+     RETURNING tree_id, latitude, longitude`,
     [latitude, longitude, id]
   );
 
@@ -282,19 +279,6 @@ const getNearby = async (treeId, radiusMeters = 100) => {
   ]);
 
   return rows;
-};
-
-const updateLocation = async (id, latitude, longitude) => {
-  const { rows } = await pool.query(
-    `UPDATE trees
-     SET latitude = $1,
-         longitude = $2
-     WHERE tree_id = $3
-     RETURNING tree_id, latitude, longitude`,
-    [latitude, longitude, id]
-  );
-
-  return rows[0] || null;
 };
 
 
