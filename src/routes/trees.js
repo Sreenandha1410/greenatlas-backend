@@ -214,14 +214,36 @@ router.post('/upload', authMiddleware, upload.single('image'), async (req, res) 
   }
 });
 
+// GET /api/trees/:id
+router.get('/:id', async (req, res) => {
+  try {
+    const tree = await treeRepo.getById(req.params.id);
+    if (!tree) return res.status(404).json({ error: 'Tree not found' });
+    res.json(tree);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/trees
+router.post('/', authMiddleware, async (req, res) => {
+  try {
+    const tree = await treeRepo.create(req.body);
+    res.status(201).json(tree);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // PATCH /api/trees/:id/location
 router.patch('/:id/location', authMiddleware, async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
 
     if (
-      latitude === undefined ||
-      longitude === undefined ||
+      typeof latitude !== 'number' ||
+      typeof longitude !== 'number' ||
       !Number.isFinite(latitude) ||
       !Number.isFinite(longitude) ||
       latitude < -90 ||
@@ -253,7 +275,7 @@ router.patch('/:id/location', authMiddleware, async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Location update error:', err);
+    console.error('Tree location update failed:', err);
 
     res.status(500).json({
       error: 'Failed to update tree location'
@@ -261,26 +283,6 @@ router.patch('/:id/location', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/trees/:id
-router.get('/:id', async (req, res) => {
-  try {
-    const tree = await treeRepo.getById(req.params.id);
-    if (!tree) return res.status(404).json({ error: 'Tree not found' });
-    res.json(tree);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/trees
-router.post('/', authMiddleware, async (req, res) => {
-  try {
-    const tree = await treeRepo.create(req.body);
-    res.status(201).json(tree);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // PUT /api/trees/:id
 router.put('/:id', authMiddleware, async (req, res) => {
