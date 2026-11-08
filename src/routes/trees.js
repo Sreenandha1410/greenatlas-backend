@@ -12,7 +12,8 @@ router.get('/', async (req, res) => {
     const trees = await treeRepo.getAll(req.query);
     res.json(trees);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -31,7 +32,8 @@ router.get('/stats', async (req, res) => {
       areas:   parseInt(areas.rows[0].count),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -52,7 +54,8 @@ router.get('/stats/detailed', authMiddleware, async (req, res) => {
       conservation: conservation.rows.map(r => ({ ...r, count: parseInt(r.count) })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -67,7 +70,8 @@ router.get('/export/csv', authMiddleware, async (req, res) => {
     res.attachment('campus_trees.csv');
     res.send(csv);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -96,7 +100,8 @@ router.get('/export/pdf', authMiddleware, async (req, res) => {
 
     doc.end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -113,7 +118,8 @@ router.get('/gallery', async (req, res) => {
     `);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 // POST /api/trees/views — record a visit
@@ -125,7 +131,8 @@ router.post('/views', async (req, res) => {
     const { rows } = await pool.query('SELECT COUNT(*) FROM page_views');
     res.json({ count: parseInt(rows[0].count) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -136,7 +143,8 @@ router.get('/views', async (req, res) => {
     const { rows } = await pool.query('SELECT COUNT(*) FROM page_views');
     res.json({ count: parseInt(rows[0].count) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -147,7 +155,8 @@ router.get('/:id/nearby', async (req, res) => {
     const trees  = await treeRepo.getNearby(req.params.id, radius);
     res.json(trees);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -159,7 +168,8 @@ router.get('/:id/qr', async (req, res) => {
     const qr  = await QRCode.toDataURL(url, { width: 300, margin: 2 });
     res.json({ qr, url });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -172,7 +182,8 @@ router.get('/:id/images', async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -186,7 +197,8 @@ router.post('/:id/images', authMiddleware, async (req, res) => {
     );
     res.status(201).json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -196,7 +208,8 @@ router.delete('/:id/images/:imgId', authMiddleware, async (req, res) => {
     await pool.query('DELETE FROM tree_images WHERE id=$1 AND tree_id=$2', [req.params.imgId, req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -210,7 +223,8 @@ router.post('/upload', authMiddleware, upload.single('image'), async (req, res) 
     });
     res.json({ url: result.secure_url });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -397,7 +411,8 @@ router.get('/:id', async (req, res) => {
     if (!tree) return res.status(404).json({ error: 'Tree not found' });
     res.json(tree);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -407,7 +422,8 @@ router.post('/', authMiddleware, async (req, res) => {
     const tree = await treeRepo.create(req.body);
     res.status(201).json(tree);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -418,7 +434,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (!tree) return res.status(404).json({ error: 'Tree not found' });
     res.json(tree);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -428,7 +445,8 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await treeRepo.remove(req.params.id);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
