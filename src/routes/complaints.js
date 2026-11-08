@@ -5,6 +5,23 @@ const { cloudinary, upload } = require('../config/cloudinary');
 const { getPool } = require('../config/db');
 
 
+// Simple in-memory rate limiter: max 5 requests per 10 minutes per IP
+const complaintSubmissions = new Map();
+const rateLimitComplaints = (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  const windowMs = 10 * 60 * 1000; // 10 minutes
+  const max = 5;
+
+  const records = (complaintSubmissions.get(ip) || []).filter(t => now - t < windowMs);
+  if (records.length >= max) {
+    return res.status(429).json({ error: 'Too many reports submitted. Please wait a few minutes.' });
+  }
+  records.push(now);
+  complaintSubmissions.set(ip, records);
+  next();
+};
+
 // =====================================================
 // UPLOAD COMPLAINT IMAGE
 // POST /api/complaints/upload
@@ -52,7 +69,7 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 // POST /api/complaints
 // =====================================================
 
-router.post('/', async (req, res) => {
+router.post('/', rateLimitComplaints, async (req, res) => {
   try {
 
     const {
