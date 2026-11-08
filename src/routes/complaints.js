@@ -95,38 +95,26 @@ router.post('/', rateLimitComplaints, async (req, res) => {
     }
 
     const pool = getPool();
+    const isPg = process.env.DB_TYPE !== 'mysql';
 
-    const { rows } = await pool.query(
-      `
-      INSERT INTO complaints
-      (
-        student_name,
-        department,
-        tree_id,
-        tree_name,
-        tree_area,
-        issue_type,
-        description,
-        image_url,
-        status
-      )
-      VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,'Pending')
-      RETURNING *
-      `,
-      [
-        student_name,
-        department,
-        tree_id,
-        tree_name || null,
-        tree_area || null,
-        issue_type,
-        description || null,
-        image_url || null
-      ]
-    );
-
-    res.status(201).json(rows[0]);
+    if (isPg) {
+      const { rows } = await pool.query(
+        `INSERT INTO complaints
+        (student_name, department, tree_id, tree_name, tree_area, issue_type, description, image_url, status)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Pending') RETURNING *`,
+        [student_name, department, tree_id, tree_name || null, tree_area || null, issue_type, description || null, image_url || null]
+      );
+      return res.status(201).json(rows[0]);
+    } else {
+      const [insertRes] = await pool.query(
+        `INSERT INTO complaints
+        (student_name, department, tree_id, tree_name, tree_area, issue_type, description, image_url, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+        [student_name, department, tree_id, tree_name || null, tree_area || null, issue_type, description || null, image_url || null]
+      );
+      const [rows] = await pool.query('SELECT * FROM complaints WHERE id = ? LIMIT 1', [insertRes.insertId]);
+      return res.status(201).json(rows[0]);
+    }
 
   } catch (err) {
 
@@ -148,15 +136,9 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
 
     const pool = getPool();
-
-    const { rows } = await pool.query(
-      `
-      SELECT *
-      FROM complaints
-      ORDER BY created_at DESC
-      `
-    );
-
+    const isPg = process.env.DB_TYPE !== 'mysql';
+    const result = await pool.query(`SELECT * FROM complaints ORDER BY created_at DESC`);
+    const rows = isPg ? result.rows : result[0];
     res.json(rows);
 
   } catch (err) {
@@ -196,31 +178,26 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
     }
 
     const pool = getPool();
+    const isPg = process.env.DB_TYPE !== 'mysql';
 
-    const { rows } = await pool.query(
-      `
-      UPDATE complaints
-      SET
-        status = $1,
-        admin_notes = $2,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $3
-      RETURNING *
-      `,
-      [
-        status,
-        admin_notes || null,
-        req.params.id
-      ]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({
-        error: 'Complaint not found'
-      });
+    if (isPg) {
+      const { rows } = await pool.query(
+        `UPDATE complaints SET status = $1, admin_notes = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 RETURNING *`,
+        [status, admin_notes || null, req.params.id]
+      );
+      if (rows.length === 0) return res.status(404).json({ error: 'Complaint not found' });
+      return res.json(rows[0]);
+    } else {
+      await pool.query(
+        `UPDATE complaints SET status = ?, admin_notes = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [status, admin_notes || null, req.params.id]
+      );
+      const [rows] = await pool.query('SELECT * FROM complaints WHERE id = ? LIMIT 1', [req.params.id]);
+      if (rows.length === 0) return res.status(404).json({ error: 'Complaint not found' });
+      return res.json(rows[0]);
     }
-
-    res.json(rows[0]);
 
   } catch (err) {
 

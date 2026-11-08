@@ -1,0 +1,125 @@
+Almost all college servers and web servers run **Ubuntu Linux** or **Debian Linux**.
+When you install Nginx on the Linux server using `sudo apt install nginx`, Ubuntu automatically creates the directory:
+ 
+  /etc/nginx/sites-available/
+  /etc/nginx/sites-enabled/
+
+
+How it is done on the college Linux server:
+1. When you SSH into the college server, you create the file:
+  
+   sudo nano /etc/nginx/sites-available/greenatlas.conf
+
+2. Paste the Nginx configuration block provided below.
+3. Enable it by creating a symbolic link:
+
+   sudo ln -s /etc/nginx/sites-available/greenatlas.conf /etc/nginx/sites-enabled/
+
+4. Test and reload Nginx:
+
+   sudo nginx -t
+   sudo systemctl reload nginx
+
+
+"/etc/nginx/sites-available/greenatlas.conf"
+{
+'''
+# 1. HTTP — Redirect all traffic to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name your-domain.college.edu;
+
+    return 301 https://$host$request_uri;
+}
+
+# 2. HTTPS — Main Server Block
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name your-domain.college.edu;
+
+    # SSL Certificates (managed automatically by Certbot)
+    ssl_certificate /etc/letsencrypt/live/your-domain.college.edu/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.college.edu/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Security Headers (HSTS, clickjacking, MIME sniffing)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Maximum upload size for tree/complaint images
+    client_max_body_size 10M;
+
+    # Root directory for Frontend React production build
+    root /var/www/greenatlas/frontend/dist;
+    index index.html;
+
+    # Frontend routes (SPA support)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API Proxy to Node.js backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeouts for uploads
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Static assets caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2|woff)$ {
+        expires 1y;
+        add_header Cache-Control "public, no-transform";
+    }
+}
+'''
+}
+
+
+
+
+
+
+PM2 Process Management (ecosystem.config.js)
+
+
+You will run those commands **in the terminal on the server** after installing PM2 globally:
+
+
+    # 1. Install PM2 globally on the server machine
+    npm install -g pm2
+
+    # 2. Navigate to your backend folder
+    cd greenatlas-backend
+
+    # 3. Start your app in production mode using the ecosystem configuration
+    pm2 start ecosystem.config.js --env production
+
+    # 4. Save the running process list so PM2 remembers it
+    pm2 save
+
+    # 5. Tell the server's operating system to launch PM2 on every system reboot
+    pm2 startup
+
+When you run `pm2 startup`, PM2 will output a single command line (like `sudo env PATH=... pm2 startup systemd -u ...`). You simply copy and paste that command into your terminal to lock in automatic startup on reboot.
+
+#### To check the status anytime on the server:
+- `pm2 status` — Shows if the server is online, CPU, and memory usage.
+- `pm2 logs` — Shows live backend console logs and errors.
+- `pm2 restart greenatlas-api` — Restarts the server after you update code.

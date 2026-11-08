@@ -1,20 +1,29 @@
-const { Pool } = require('pg');
 require('dotenv').config();
 
-let pgPool = null;
+const dbType = process.env.DB_TYPE || 'pg';
 
-const connectDB = async () => {
-  pgPool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' 
-      ? { rejectUnauthorized: true } 
-      : { rejectUnauthorized: false }
-  });
+let dbModule;
 
-  await pgPool.query('SELECT 1');
-  console.log('PostgreSQL connected to Neon ✅');
-};
+if (dbType === 'mysql') {
+  dbModule = require('./db-mysql');
+} else {
+  const { Pool } = require('pg');
+  let pgPool = null;
 
-const getPool = () => pgPool;
+  const connectDB = async () => {
+    pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' 
+        ? { rejectUnauthorized: true } 
+        : { rejectUnauthorized: false }
+    });
 
-module.exports = { connectDB, getPool };
+    await pgPool.query('SELECT 1');
+    console.log('PostgreSQL connected ✅');
+  };
+
+  const getPool = () => pgPool;
+  dbModule = { connectDB, getPool };
+}
+
+module.exports = dbModule;
