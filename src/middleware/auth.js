@@ -9,7 +9,8 @@ module.exports = (req, res, next) => {
     if (decoded.role !== 'admin') return res.status(403).json({ error: 'Admins only' });
     req.user = decoded;
     next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
