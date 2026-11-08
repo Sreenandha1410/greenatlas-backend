@@ -20,10 +20,12 @@ app.use(helmet({
 
 const corsOptions = {
   origin: function (origin, callback) {
+    const frontendUrl = process.env.FRONTEND_URL;
     if (
       !origin ||
       origin.endsWith('.vercel.app') ||
-      origin === 'http://localhost:5173'
+      origin === 'http://localhost:5173' ||
+      (frontendUrl && origin === frontendUrl)
     ) {
       callback(null, true);
     } else {
