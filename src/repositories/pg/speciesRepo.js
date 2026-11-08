@@ -26,7 +26,7 @@ const create = async (data) => {
     'lifespan','growth_rate','flowering_season','fruiting_season','native_exotic',
     'pollination_method','wildlife_supported','ecological_importance','medicinal_uses',
     'economic_uses','environmental_benefits','cultural_significance','interesting_facts',
-    'conservation_status','image_url'
+    'conservation_status','image_url', 'flora_type' // <-- ADD HERE
   ];
   const filtered = Object.fromEntries(
     Object.entries(data).filter(([k]) => allowed.includes(k))
@@ -43,12 +43,12 @@ const create = async (data) => {
 
 const update = async (id, data) => {
   const allowed = [
-    'common_name','tamil_name','kingdom','division','class','order','family',
+    'species_id','common_name','tamil_name','kingdom','division','class','order','family',
     'genus','species','origin','name_breakdown','general_description','avg_height',
     'lifespan','growth_rate','flowering_season','fruiting_season','native_exotic',
     'pollination_method','wildlife_supported','ecological_importance','medicinal_uses',
     'economic_uses','environmental_benefits','cultural_significance','interesting_facts',
-    'conservation_status','image_url'
+    'conservation_status','image_url', 'flora_type' // <-- ADD HERE
   ];
   const filtered = Object.fromEntries(
     Object.entries(data).filter(([k]) => allowed.includes(k))
