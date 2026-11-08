@@ -20,42 +20,17 @@ router.get('/', async (req, res) => {
 // GET /api/trees/stats
 router.get('/stats', async (req, res) => {
   try {
-    const pool = require('../config/db').getPool();
-    const [trees, species, areas] = await Promise.all([
-      pool.query('SELECT COUNT(*) FROM trees'),
-      pool.query('SELECT COUNT(*) FROM species'),
-      pool.query('SELECT COUNT(*) FROM areas'),
-    ]);
-    res.json({
-      trees:   parseInt(trees.rows[0].count),
-      species: parseInt(species.rows[0].count),
-      areas:   parseInt(areas.rows[0].count),
-    });
+    res.json(await treeRepo.getStats());
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Failed to fetch tree stats' });
   }
 });
-
 // GET /api/trees/stats/detailed
 router.get('/stats/detailed', authMiddleware, async (req, res) => {
   try {
-    const pool = require('../config/db').getPool();
-    const [byArea, byFamily, nativeExotic, conservation] = await Promise.all([
-      pool.query('SELECT area, COUNT(*) as count FROM trees GROUP BY area ORDER BY count DESC'),
-      pool.query('SELECT family, COUNT(*) as count FROM trees WHERE family IS NOT NULL GROUP BY family ORDER BY count DESC LIMIT 10'),
-      pool.query('SELECT native_exotic, COUNT(*) as count FROM species WHERE native_exotic IS NOT NULL GROUP BY native_exotic'),
-      pool.query('SELECT conservation_status, COUNT(*) as count FROM species WHERE conservation_status IS NOT NULL GROUP BY conservation_status ORDER BY count DESC'),
-    ]);
-    res.json({
-      byArea:       byArea.rows.map(r => ({ ...r, count: parseInt(r.count) })),
-      byFamily:     byFamily.rows.map(r => ({ ...r, count: parseInt(r.count) })),
-      nativeExotic: nativeExotic.rows.map(r => ({ ...r, count: parseInt(r.count) })),
-      conservation: conservation.rows.map(r => ({ ...r, count: parseInt(r.count) })),
-    });
+    res.json(await treeRepo.getDetailedStats());
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Failed to fetch detailed stats' });
   }
 });
 
@@ -105,46 +80,30 @@ router.get('/export/pdf', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/trees/gallery  ← ADD HERE (before any /:id routes)
+// GET /api/trees/gallery
 router.get('/gallery', async (req, res) => {
   try {
-    const pool = require('../config/db').getPool();
-    const { rows } = await pool.query(`
-      SELECT ti.image_url, ti.caption, ti.is_primary,
-             t.tree_id, t.common_name, t.botanical_name, t.area
-      FROM tree_images ti
-      JOIN trees t ON ti.tree_id = t.tree_id
-      ORDER BY ti.is_primary DESC, ti.id ASC
-    `);
-    res.json(rows);
+    res.json(await treeRepo.getGallery());
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Failed to fetch gallery' });
   }
 });
-// POST /api/trees/views — record a visit
+// POST /api/trees/views
 router.post('/views', async (req, res) => {
   try {
-    const pool = require('../config/db').getPool();
-    const { path } = req.body;
-    await pool.query('INSERT INTO page_views (path) VALUES ($1)', [path || '/']);
-    const { rows } = await pool.query('SELECT COUNT(*) FROM page_views');
-    res.json({ count: parseInt(rows[0].count) });
+    const count = await treeRepo.recordView(req.body.path);
+    res.json({ count });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Failed to record page view' });
   }
 });
-
-// GET /api/trees/views — get total count
+// GET /api/trees/views
 router.get('/views', async (req, res) => {
   try {
-    const pool = require('../config/db').getPool();
-    const { rows } = await pool.query('SELECT COUNT(*) FROM page_views');
-    res.json({ count: parseInt(rows[0].count) });
+    const count = await treeRepo.getViewCount();
+    res.json({ count });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Failed to fetch page views' });
   }
 });
 
