@@ -174,16 +174,29 @@ router.delete('/:id/images/:imgId', authMiddleware, async (req, res) => {
 
 router.post('/upload', authMiddleware, upload.single('image'), async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+
     const result = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
+      const stream = cloudinary.uploader.upload_stream(
         { folder: 'campus-trees' },
-        (error, result) => error ? reject(error) : resolve(result)
-      ).end(req.file.buffer);
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary stream error:', error);
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
+      );
+      stream.end(req.file.buffer);
     });
+
     res.json({ url: result.secure_url });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Upload handler error:', err);
+    res.status(500).json({ error: err.message || 'Image upload failed' });
   }
 });
 
