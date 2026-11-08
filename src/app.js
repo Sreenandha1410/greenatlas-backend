@@ -6,8 +6,12 @@ const { connectDB } = require('./config/db');
 const app = express();
 
 const corsOptions = {
-  origin: function(origin, callback) {
-    if (!origin || origin.endsWith('.vercel.app') || origin === 'http://localhost:5173') {
+  origin: function (origin, callback) {
+    if (
+      !origin ||
+      origin.endsWith('.vercel.app') ||
+      origin === 'http://localhost:5173'
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -22,19 +26,30 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Routes
-app.use('/api/trees',   require('./routes/trees'));
-app.use('/api/species', require('./routes/species'));
-app.use('/api/areas',   require('./routes/areas'));
-app.use('/api/auth',    require('./routes/auth'));
-app.use('/api/complaints', require('./routes/complaints'));
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    message: 'Green Atlas backend is running'
+  });
+});
 
+// Routes
+app.use('/api/trees', require('./routes/trees'));
+app.use('/api/species', require('./routes/species'));
+app.use('/api/areas', require('./routes/areas'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/complaints', require('./routes/complaints'));
 
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}).catch(err => {
-  console.error('DB connection failed:', err);
-  process.exit(1);
-});
+connectDB()
+  .then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('DB connection failed:', err);
+    process.exit(1);
+  });
