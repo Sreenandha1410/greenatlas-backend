@@ -281,6 +281,60 @@ const getNearby = async (treeId, radiusMeters = 100) => {
   return rows;
 };
 
+const getStats = async () => {
+  const pool = getPool();
+  const [trees, species, areas] = await Promise.all([
+    pool.query('SELECT COUNT(*) FROM trees'),
+    pool.query('SELECT COUNT(*) FROM species'),
+    pool.query('SELECT COUNT(*) FROM areas'),
+  ]);
+  return {
+    trees: parseInt(trees.rows[0].count),
+    species: parseInt(species.rows[0].count),
+    areas: parseInt(areas.rows[0].count),
+  };
+};
+
+const getDetailedStats = async () => {
+  const pool = getPool();
+  const [byArea, byFamily, nativeExotic, conservation] = await Promise.all([
+    pool.query('SELECT area, COUNT(*) as count FROM trees GROUP BY area ORDER BY count DESC'),
+    pool.query('SELECT family, COUNT(*) as count FROM trees WHERE family IS NOT NULL GROUP BY family ORDER BY count DESC LIMIT 10'),
+    pool.query('SELECT native_exotic, COUNT(*) as count FROM species WHERE native_exotic IS NOT NULL GROUP BY native_exotic'),
+    pool.query('SELECT conservation_status, COUNT(*) as count FROM species WHERE conservation_status IS NOT NULL GROUP BY conservation_status ORDER BY count DESC'),
+  ]);
+  return {
+    byArea: byArea.rows.map(r => ({ ...r, count: parseInt(r.count) })),
+    byFamily: byFamily.rows.map(r => ({ ...r, count: parseInt(r.count) })),
+    nativeExotic: nativeExotic.rows.map(r => ({ ...r, count: parseInt(r.count) })),
+    conservation: conservation.rows.map(r => ({ ...r, count: parseInt(r.count) })),
+  };
+};
+
+const getGallery = async () => {
+  const pool = getPool();
+  const { rows } = await pool.query(`
+    SELECT ti.image_url, ti.caption, ti.is_primary,
+           t.tree_id, t.common_name, t.botanical_name, t.area
+    FROM tree_images ti
+    JOIN trees t ON ti.tree_id = t.tree_id
+    ORDER BY ti.is_primary DESC, ti.id ASC
+  `);
+  return rows;
+};
+
+const recordView = async (path = '/') => {
+  const pool = getPool();
+  await pool.query('INSERT INTO page_views (path) VALUES ($1)', [path]);
+  const { rows } = await pool.query('SELECT COUNT(*) FROM page_views');
+  return parseInt(rows[0].count);
+};
+
+const getViewCount = async () => {
+  const pool = getPool();
+  const { rows } = await pool.query('SELECT COUNT(*) FROM page_views');
+  return parseInt(rows[0].count);
+};
 
 module.exports = {
   getAll,
@@ -289,5 +343,10 @@ module.exports = {
   update,
   updateLocation,
   remove,
-  getNearby
+  getNearby,
+  getStats,
+  getDetailedStats,
+  getGallery,
+  recordView,
+  getViewCount
 };
