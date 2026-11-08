@@ -6,7 +6,9 @@ let pgPool = null;
 const connectDB = async () => {
   pgPool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: process.env.NODE_ENV === 'production' 
+      ? { rejectUnauthorized: true } 
+      : { rejectUnauthorized: false }
   });
 
   await pgPool.query('SELECT 1');
