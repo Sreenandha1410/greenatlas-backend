@@ -4,20 +4,29 @@ const getAll = async () => {
   const [rows] = await getPool().query(
     'SELECT * FROM areas ORDER BY area'
   );
+
   return rows;
 };
 
 const getByArea = async (areaName) => {
   const [rows] = await getPool().query(
-    'SELECT * FROM areas WHERE area = ? LIMIT 1',
+    'SELECT * FROM areas WHERE area = ?',
     [areaName]
   );
   return rows[0] || null;
 };
 
+const create = async ({ area, area_code, image_url, description, navigation_notes }) => {
+  await getPool().query(
+    `INSERT INTO areas (area, area_code, image_url, description, navigation_notes)
+     VALUES (?, ?, ?, ?, ?)`,
+    [area, area_code, image_url || null, description || null, navigation_notes || null]
+  );
+  return getByArea(area);
+};
+
 const updateInfo = async (areaName, { image_url, description, navigation_notes }) => {
-  const pool = getPool();
-  await pool.query(
+  await getPool().query(
     `UPDATE areas
      SET image_url = ?,
          description = ?,
@@ -25,12 +34,15 @@ const updateInfo = async (areaName, { image_url, description, navigation_notes }
      WHERE area = ?`,
     [image_url || null, description || null, navigation_notes || null, areaName]
   );
-
-  const [rows] = await pool.query(
-    'SELECT * FROM areas WHERE area = ? LIMIT 1',
-    [areaName]
-  );
-  return rows[0] || null;
+  return getByArea(areaName);
 };
 
-module.exports = { getAll, getByArea, updateInfo };
+const remove = async (areaName) => {
+  const [result] = await getPool().query(
+    'DELETE FROM areas WHERE area = ?',
+    [areaName]
+  );
+  return result.affectedRows > 0;
+};
+
+module.exports = { getAll, getByArea, create, updateInfo, remove };
