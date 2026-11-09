@@ -82,6 +82,7 @@ router.get('/export/pdf', authMiddleware, async (req, res) => {
 
 // GET /api/trees/export/table/:table — Export any database table as CSV or JSON (Admin only)
 // GET /api/trees/export/table/:table — Export any database table as CSV or JSON (Admin only)
+// GET /api/trees/export/table/:table — Export any database table as CSV or JSON (Admin only)
 router.get('/export/table/:table', authMiddleware, async (req, res) => {
   try {
     const tableName = (req.params.table || '').toLowerCase().trim();
@@ -109,13 +110,8 @@ router.get('/export/table/:table', authMiddleware, async (req, res) => {
     const pool = getPool();
     const isPg = process.env.DB_TYPE !== 'mysql';
 
-    // Exclude sensitive password_hash from users table
-    let selectClause = '*';
-    if (tableName === 'users') {
-      selectClause = 'id, username, role, created_at';
-    }
-
-    const query = `SELECT ${selectClause} FROM ${tableName}`;
+    // Query all columns directly without assuming column names
+    const query = `SELECT * FROM ${tableName}`;
     let rows = [];
 
     if (isPg) {
@@ -124,6 +120,16 @@ router.get('/export/table/:table', authMiddleware, async (req, res) => {
     } else {
       const [resultRows] = await pool.query(query);
       rows = Array.isArray(resultRows) ? resultRows : [];
+    }
+
+    // Sanitize sensitive credentials if exporting users table
+    if (tableName === 'users') {
+      rows = rows.map(u => {
+        const copy = { ...u };
+        delete copy.password_hash;
+        delete copy.password;
+        return copy;
+      });
     }
 
     const timestamp = new Date().toISOString().slice(0, 10);
@@ -144,7 +150,6 @@ router.get('/export/table/:table', authMiddleware, async (req, res) => {
       return res.send('');
     }
 
-    // Safely parse CSV using headers from first row
     const fields = Object.keys(rows[0]);
     const parser = new Parser({ fields, defaultValue: '' });
     const csv = parser.parse(rows);
