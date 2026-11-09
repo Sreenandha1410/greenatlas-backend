@@ -80,6 +80,70 @@ router.get('/export/pdf', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/trees/export/table/:table — Export any database table as CSV or JSON (Admin only)
+router.get('/export/table/:table', authMiddleware, async (req, res) => {
+  try {
+    const tableName = req.params.table.toLowerCase();
+    const format = (req.query.format || 'csv').toLowerCase();
+
+    // Whitelist allowed tables to prevent SQL injection
+    const ALLOWED_TABLES = [
+      'trees',
+      'species',
+      'areas',
+      'complaints',
+      'tree_images',
+      'tree_location_history',
+      'page_views',
+      'users'
+    ];
+
+    if (!ALLOWED_TABLES.includes(tableName)) {
+      return res.status(400).json({ error: `Invalid table name. Allowed tables: ${ALLOWED_TABLES.join(', ')}` });
+    }
+
+    const pool = require('../config/db').getPool();
+    const isPg = process.env.DB_TYPE !== 'mysql';
+
+    // Exclude password_hash from users table for security
+    let selectClause = '*';
+    if (tableName === 'users') {
+      selectClause = 'id, username, role, created_at';
+    }
+
+    const query = `SELECT ${selectClause} FROM ${tableName}`;
+    const result = await pool.query(query);
+    const rows = isPg ? result.rows : result[0];
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `green_atlas_${tableName}_${timestamp}`;
+
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}.json"`);
+      return res.send(JSON.stringify(rows, null, 2));
+    }
+
+    // Default CSV format
+    if (!rows || rows.length === 0) {
+      res.type('text/csv');
+      res.attachment(`${filename}.csv`);
+      return res.send('');
+    }
+
+    const fields = Object.keys(rows[0]);
+    const parser = new Parser({ fields });
+    const csv = parser.parse(rows);
+
+    res.type('text/csv');
+    res.attachment(`${filename}.csv`);
+    return res.send(csv);
+  } catch (err) {
+    console.error('Table export failed:', err);
+    res.status(500).json({ error: 'Failed to export table data' });
+  }
+});
+
 // GET /api/trees/gallery
 router.get('/gallery', async (req, res) => {
   try {
