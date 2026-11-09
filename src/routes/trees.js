@@ -81,10 +81,11 @@ router.get('/export/pdf', authMiddleware, async (req, res) => {
 });
 
 // GET /api/trees/export/table/:table — Export any database table as CSV or JSON (Admin only)
+// GET /api/trees/export/table/:table — Export any database table as CSV or JSON (Admin only)
 router.get('/export/table/:table', authMiddleware, async (req, res) => {
   try {
-    const tableName = req.params.table.toLowerCase();
-    const format = (req.query.format || 'csv').toLowerCase();
+    const tableName = (req.params.table || '').toLowerCase().trim();
+    const format = (req.query.format || 'csv').toLowerCase().trim();
 
     // Whitelist allowed tables to prevent SQL injection
     const ALLOWED_TABLES = [
@@ -99,48 +100,59 @@ router.get('/export/table/:table', authMiddleware, async (req, res) => {
     ];
 
     if (!ALLOWED_TABLES.includes(tableName)) {
-      return res.status(400).json({ error: `Invalid table name. Allowed tables: ${ALLOWED_TABLES.join(', ')}` });
+      return res.status(400).json({ 
+        error: `Invalid table name. Allowed tables: ${ALLOWED_TABLES.join(', ')}` 
+      });
     }
 
-    const pool = require('../config/db').getPool();
+    const { getPool } = require('../config/db');
+    const pool = getPool();
     const isPg = process.env.DB_TYPE !== 'mysql';
 
-    // Exclude password_hash from users table for security
+    // Exclude sensitive password_hash from users table
     let selectClause = '*';
     if (tableName === 'users') {
       selectClause = 'id, username, role, created_at';
     }
 
     const query = `SELECT ${selectClause} FROM ${tableName}`;
-    const result = await pool.query(query);
-    const rows = isPg ? result.rows : result[0];
+    let rows = [];
+
+    if (isPg) {
+      const result = await pool.query(query);
+      rows = result.rows || [];
+    } else {
+      const [resultRows] = await pool.query(query);
+      rows = Array.isArray(resultRows) ? resultRows : [];
+    }
 
     const timestamp = new Date().toISOString().slice(0, 10);
     const filename = `green_atlas_${tableName}_${timestamp}`;
 
+    // Format: JSON
     if (format === 'json') {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}.json"`);
       return res.send(JSON.stringify(rows, null, 2));
     }
 
-    // Default CSV format
+    // Format: CSV
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}.csv"`);
+
     if (!rows || rows.length === 0) {
-      res.type('text/csv');
-      res.attachment(`${filename}.csv`);
       return res.send('');
     }
 
+    // Safely parse CSV using headers from first row
     const fields = Object.keys(rows[0]);
-    const parser = new Parser({ fields });
+    const parser = new Parser({ fields, defaultValue: '' });
     const csv = parser.parse(rows);
 
-    res.type('text/csv');
-    res.attachment(`${filename}.csv`);
     return res.send(csv);
   } catch (err) {
-    console.error('Table export failed:', err);
-    res.status(500).json({ error: 'Failed to export table data' });
+    console.error('Table export error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to export table data' });
   }
 });
 
