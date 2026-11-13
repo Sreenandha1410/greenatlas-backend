@@ -1,7 +1,12 @@
 const DB = process.env.DB_TYPE || 'pg';
 
-const treeRepo   = require(`./${DB}/treeRepo`);
-const speciesRepo = require(`./${DB}/speciesRepo`);
-const areaRepo   = require(`./${DB}/areaRepo`);
+const SUPPORTED = ['pg', 'mysql'];
+if (!SUPPORTED.includes(DB)) {
+  throw new Error(`Unsupported DB_TYPE: "${DB}". Only "mysql" and "pg" are supported.`);
+}
 
-module.exports = { treeRepo, speciesRepo, areaRepo };
+const treeRepo = require(`./${DB}/treeRepo`);
+const speciesRepo = require(`./${DB}/speciesRepo`);
+const areaRepo = require(`./${DB}/areaRepo`);
+const userRepo = require(`./${DB}/userRepo`);
+module.exports = { treeRepo, speciesRepo, areaRepo, userRepo };
