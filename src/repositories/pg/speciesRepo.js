@@ -21,7 +21,7 @@ const getById = async (id) => {
 
 const create = async (data) => {
   const allowed = [
-    'species_id','common_name','tamil_name','kingdom','division','class','order','family',
+    'species_id','common_name','tamil_name','kingdom','division','class','order_name','family',
     'genus','species','origin','name_breakdown','general_description','avg_height',
     'lifespan','growth_rate','flowering_season','fruiting_season','native_exotic',
     'pollination_method','wildlife_supported','ecological_importance','medicinal_uses',
@@ -43,7 +43,7 @@ const create = async (data) => {
 
 const update = async (id, data) => {
   const allowed = [
-    'species_id','common_name','tamil_name','kingdom','division','class','order','family',
+    'species_id','common_name','tamil_name','kingdom','division','class','order_name','family',
     'genus','species','origin','name_breakdown','general_description','avg_height',
     'lifespan','growth_rate','flowering_season','fruiting_season','native_exotic',
     'pollination_method','wildlife_supported','ecological_importance','medicinal_uses',
