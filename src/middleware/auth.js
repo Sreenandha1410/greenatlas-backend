@@ -18,6 +18,9 @@ module.exports = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'Unauthorized: Invalid or expired token' });
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+    res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 };
