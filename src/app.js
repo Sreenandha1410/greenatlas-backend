@@ -30,8 +30,8 @@ const corsOptions = {
     const frontendUrl = process.env.FRONTEND_URL;
     if (
       !origin ||
-      origin.endsWith('.vercel.app') ||              // <-- Allows ALL Vercel preview & main deploys
-      allowedOrigins.includes(origin) ||            // <-- Allows your custom domains & localhost
+      origin.endsWith('.vercel.app') ||
+      allowedOrigins.includes(origin) ||
       (frontendUrl && origin === frontendUrl)
     ) {
       callback(null, true);
@@ -39,12 +39,6 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-};
-
-app.use(cors(corsOptions));
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
