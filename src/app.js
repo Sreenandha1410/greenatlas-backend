@@ -18,13 +18,18 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+const allowedOrigins = [
+  'https://sonagreenatlas.in',
+  'https://www.sonagreenatlas.in',
+  'http://localhost:5173'
+];
+
 const corsOptions = {
   origin: function (origin, callback) {
     const frontendUrl = process.env.FRONTEND_URL;
     if (
       !origin ||
-      origin.endsWith('.vercel.app') ||
-      origin === 'http://localhost:5173' ||
+      allowedOrigins.includes(origin) ||
       (frontendUrl && origin === frontendUrl)
     ) {
       callback(null, true);
