@@ -22,15 +22,17 @@ router.get('/stats', async (req, res) => {
   try {
     res.json(await treeRepo.getStats());
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch tree stats' });
+    console.error('Stats error:', err);
+    res.status(500).json({ error: 'Failed to get stats' });
   }
 });
 // GET /api/trees/stats/detailed
-router.get('/stats/detailed', authMiddleware, async (req, res) => {
+router.get('/stats/detailed', async (req, res) => {
   try {
     res.json(await treeRepo.getDetailedStats());
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch detailed stats' });
+    console.error('Detailed stats error:', err);
+    res.status(500).json({ error: 'Failed to get detailed stats' });
   }
 });
 
@@ -166,25 +168,27 @@ router.get('/gallery', async (req, res) => {
   try {
     res.json(await treeRepo.getGallery());
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch gallery' });
-  }
-});
-// POST /api/trees/views
-router.post('/views', async (req, res) => {
-  try {
-    const count = await treeRepo.recordView(req.body.path);
-    res.json({ count });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to record page view' });
+    console.error('Gallery error:', err);
+    res.status(500).json({ error: 'Failed to get gallery' });
   }
 });
 // GET /api/trees/views
 router.get('/views', async (req, res) => {
   try {
-    const count = await treeRepo.getViewCount();
+    res.json({ count: await treeRepo.getViewCount() });
+  } catch (err) {
+    console.error('Get views error:', err);
+    res.status(500).json({ error: 'Failed to get views' });
+  }
+});
+// POST /api/trees/views
+router.post('/views', async (req, res) => {
+  try {
+    const count = await treeRepo.recordView(req.body.path || '/');
     res.json({ count });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch page views' });
+    console.error('Record view error:', err);
+    res.status(500).json({ error: 'Failed to record view' });
   }
 });
 
