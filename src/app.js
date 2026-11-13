@@ -21,6 +21,7 @@ app.use(helmet({
 const allowedOrigins = [
   'https://sonagreenatlas.in',
   'https://www.sonagreenatlas.in',
+  'https://sona-greenatlas.vercel.app',
   'http://localhost:5173'
 ];
 
@@ -29,7 +30,8 @@ const corsOptions = {
     const frontendUrl = process.env.FRONTEND_URL;
     if (
       !origin ||
-      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||              // <-- Allows ALL Vercel preview & main deploys
+      allowedOrigins.includes(origin) ||            // <-- Allows your custom domains & localhost
       (frontendUrl && origin === frontendUrl)
     ) {
       callback(null, true);
@@ -37,6 +39,12 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
