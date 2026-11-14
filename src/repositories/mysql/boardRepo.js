@@ -73,12 +73,17 @@ async function getStats() {
 async function getMissingTrees() {
   const pool = getPool();
   const [rows] = await pool.query(`
-    SELECT t.tree_id, t.common_name, t.botanical_name, t.area,
-           COALESCE(s.flora_type, 'tree') AS flora_type
+    SELECT
+      t.tree_id,
+      MAX(t.common_name) AS common_name,
+      MAX(t.botanical_name) AS botanical_name,
+      MAX(t.area) AS area,
+      COALESCE(MAX(s.flora_type), 'tree') AS flora_type
     FROM trees t
     LEFT JOIN species s ON t.botanical_name = CONCAT(s.genus, ' ', s.species)
     WHERE t.tree_id NOT IN (SELECT primary_tree_id FROM tree_boards)
-    ORDER BY t.area, t.common_name
+    GROUP BY t.tree_id
+    ORDER BY t.tree_id
   `);
   return rows;
 }
