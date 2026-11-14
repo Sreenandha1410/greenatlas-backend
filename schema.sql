@@ -136,3 +136,26 @@ CREATE TABLE IF NOT EXISTS page_views (
   path VARCHAR(255) DEFAULT '/',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+
+
+CREATE TABLE IF NOT EXISTS tree_boards (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  board_id VARCHAR(50) NOT NULL UNIQUE,
+  primary_tree_id VARCHAR(50) NOT NULL,
+  board_type ENUM('individual', 'group') DEFAULT 'individual',
+  status ENUM('Need to Fix', 'Board Fixed', 'Requires Maintenance') DEFAULT 'Need to Fix',
+  group_tree_ids JSON DEFAULT NULL,
+  group_count INT NOT NULL DEFAULT 1,
+  location_description VARCHAR(500) DEFAULT NULL,
+  area VARCHAR(150) DEFAULT NULL,
+  installed_date DATE DEFAULT NULL,
+  last_checked DATE DEFAULT NULL,
+  installed_by VARCHAR(255) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (primary_tree_id) REFERENCES trees(tree_id) ON DELETE CASCADE,
+  INDEX idx_boards_status (status),
+  INDEX idx_boards_type (board_type),
+  INDEX idx_boards_area (area)
+) ENGINE=InnoDB;
