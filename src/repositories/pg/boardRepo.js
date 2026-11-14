@@ -1,6 +1,6 @@
 const { getPool } = require('../../config/db');
 
-async function getAll({ status, type, area, search } = {}) {
+async function getAll({ status, type, area, search, flora_type } = {}) {
   const pool = getPool();
   const conditions = [];
   const values = [];
@@ -13,14 +13,20 @@ async function getAll({ status, type, area, search } = {}) {
     conditions.push(`(b.board_id ILIKE $${idx} OR b.primary_tree_id ILIKE $${idx} OR t.common_name ILIKE $${idx} OR b.area ILIKE $${idx})`);
     values.push(`%${search}%`); idx++;
   }
+  if (flora_type) {
+    conditions.push(`COALESCE(s.flora_type, 'tree') = $${idx++}`);
+    values.push(flora_type);
+  }
 
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
   const result = await pool.query(`
     SELECT b.*,
-           t.common_name, t.botanical_name
+           t.common_name, t.botanical_name,
+           COALESCE(s.flora_type, 'tree') AS flora_type
     FROM tree_boards b
     LEFT JOIN trees t ON t.tree_id = b.primary_tree_id
+    LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
     ${where}
     ORDER BY b.created_at DESC
   `, values);
@@ -34,9 +40,11 @@ async function getAll({ status, type, area, search } = {}) {
 async function getById(id) {
   const pool = getPool();
   const result = await pool.query(`
-    SELECT b.*, t.common_name, t.botanical_name
+    SELECT b.*, t.common_name, t.botanical_name,
+           COALESCE(s.flora_type, 'tree') AS flora_type
     FROM tree_boards b
     LEFT JOIN trees t ON t.tree_id = b.primary_tree_id
+    LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
     WHERE b.id = $1
   `, [id]);
   return result.rows[0] || null;
@@ -60,8 +68,10 @@ async function getStats() {
 async function getMissingTrees() {
   const pool = getPool();
   const result = await pool.query(`
-    SELECT t.tree_id, t.common_name, t.botanical_name, t.area
+    SELECT t.tree_id, t.common_name, t.botanical_name, t.area,
+           COALESCE(s.flora_type, 'tree') AS flora_type
     FROM trees t
+    LEFT JOIN species s ON t.botanical_name = (s.genus || ' ' || s.species)
     WHERE t.tree_id NOT IN (
       SELECT primary_tree_id FROM tree_boards
     )
@@ -71,6 +81,33 @@ async function getMissingTrees() {
     ORDER BY t.area, t.common_name
   `);
   return result.rows;
+}
+
+async function bulkCreate(treeIds) {
+  const pool = getPool();
+  if (!Array.isArray(treeIds) || !treeIds.length) {
+    return { created: 0, skipped: 0 };
+  }
+
+  // Inserts missing individual boards with 'Need to Fix' status and area from trees table
+  const result = await pool.query(`
+    INSERT INTO tree_boards (board_id, primary_tree_id, board_type, status, area, group_count)
+    SELECT
+      'BRD-' || t.tree_id,
+      t.tree_id,
+      'individual',
+      'Need to Fix',
+      t.area,
+      1
+    FROM trees t
+    WHERE t.tree_id = ANY($1)
+    ON CONFLICT (board_id) DO NOTHING
+    RETURNING board_id;
+  `, [treeIds]);
+
+  const createdCount = result.rowCount;
+  const skippedCount = treeIds.length - createdCount;
+  return { created: createdCount, skipped: skippedCount };
 }
 
 async function create(data) {
@@ -117,6 +154,7 @@ async function update(id, data) {
     if (data[key] !== undefined) {
       let val = data[key];
       if (key === 'group_tree_ids') val = JSON.stringify(val);
+      if ((key === 'installed_date' || key === 'last_checked') && val === '') val = null;
       sets.push(`${key} = $${idx++}`);
       values.push(val);
     }
@@ -141,9 +179,37 @@ async function updateStatus(id, status) {
   return result.rows[0];
 }
 
+async function updateDates(id, { installed_date, last_checked }) {
+  const pool = getPool();
+  const sets = [];
+  const values = [];
+  let idx = 1;
+
+  if (installed_date !== undefined) {
+    sets.push(`installed_date = $${idx++}`);
+    values.push(installed_date || null);
+  }
+  if (last_checked !== undefined) {
+    sets.push(`last_checked = $${idx++}`);
+    values.push(last_checked || null);
+  }
+
+  if (!sets.length) return getById(id);
+
+  values.push(id);
+  const result = await pool.query(
+    `UPDATE tree_boards SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
+    values
+  );
+  return result.rows[0];
+}
+
 async function remove(id) {
   const pool = getPool();
   await pool.query('DELETE FROM tree_boards WHERE id = $1', [id]);
 }
 
-module.exports = { getAll, getById, getStats, getMissingTrees, create, update, updateStatus, remove };
+module.exports = {
+  getAll, getById, getStats, getMissingTrees, bulkCreate,
+  create, update, updateStatus, updateDates, remove
+};
