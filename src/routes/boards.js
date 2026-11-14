@@ -6,8 +6,8 @@ const authMiddleware = require('../middleware/auth');
 // GET /api/boards
 router.get('/', async (req, res) => {
   try {
-    const { status, type, area, search } = req.query;
-    const boards = await boardRepo.getAll({ status, type, area, search });
+    const { status, type, area, search, flora_type } = req.query;
+    const boards = await boardRepo.getAll({ status, type, area, search, flora_type });
     res.json(boards);
   } catch (err) {
     console.error('GET /boards:', err);
@@ -37,13 +37,29 @@ router.get('/missing', authMiddleware, async (req, res) => {
   }
 });
 
+// POST /api/boards/bulk
+router.post('/bulk', authMiddleware, async (req, res) => {
+  try {
+    const { treeIds } = req.body;
+    if (!Array.isArray(treeIds) || !treeIds.length) {
+      return res.status(400).json({ error: 'treeIds array is required' });
+    }
+    const cleanIds = treeIds.map(id => String(id).trim()).filter(Boolean);
+    const result = await boardRepo.bulkCreate(cleanIds);
+    res.json(result);
+  } catch (err) {
+    console.error('POST /boards/bulk:', err);
+    res.status(500).json({ error: 'Failed to bulk create boards' });
+  }
+});
+
 // GET /api/boards/export/csv
 router.get('/export/csv', authMiddleware, async (req, res) => {
   try {
     const boards = await boardRepo.getAll({});
     const headers = [
       'board_id', 'primary_tree_id', 'common_name', 'botanical_name',
-      'tamil_name', 'board_type', 'group_count', 'status', 'area',
+      'board_type', 'group_count', 'status', 'area',
       'location_description', 'installed_date', 'last_checked',
       'installed_by', 'notes', 'created_at'
     ];
@@ -117,6 +133,19 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('PATCH /boards/:id/status:', err);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// PATCH /api/boards/:id/dates
+router.patch('/:id/dates', authMiddleware, async (req, res) => {
+  try {
+    const { installed_date, last_checked } = req.body;
+    const board = await boardRepo.updateDates(req.params.id, { installed_date, last_checked });
+    if (!board) return res.status(404).json({ error: 'Board not found' });
+    res.json(board);
+  } catch (err) {
+    console.error('PATCH /boards/:id/dates:', err);
+    res.status(500).json({ error: 'Failed to update dates' });
   }
 });
 
