@@ -1,6 +1,7 @@
-const pool = require('../../db/mysql');
+const { getPool } = require('../../config/db');
 
 async function getAll({ status, type, area, search } = {}) {
+  const pool = getPool();
   const conditions = [];
   const values = [];
 
@@ -15,7 +16,7 @@ async function getAll({ status, type, area, search } = {}) {
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
   const [rows] = await pool.query(`
-    SELECT b.*, t.common_name, t.botanical_name, t.tamil_name
+    SELECT b.*, t.common_name, t.botanical_name
     FROM tree_boards b
     LEFT JOIN trees t ON t.tree_id = b.primary_tree_id
     ${where}
@@ -31,8 +32,9 @@ async function getAll({ status, type, area, search } = {}) {
 }
 
 async function getById(id) {
+  const pool = getPool();
   const [rows] = await pool.query(`
-    SELECT b.*, t.common_name, t.botanical_name, t.tamil_name
+    SELECT b.*, t.common_name, t.botanical_name
     FROM tree_boards b
     LEFT JOIN trees t ON t.tree_id = b.primary_tree_id
     WHERE b.id = ?
@@ -46,6 +48,7 @@ async function getById(id) {
 }
 
 async function getStats() {
+  const pool = getPool();
   const [rows] = await pool.query(`
     SELECT
       SUM(status = 'Need to Fix') AS need_fix,
@@ -60,6 +63,7 @@ async function getStats() {
 }
 
 async function getMissingTrees() {
+  const pool = getPool();
   const [rows] = await pool.query(`
     SELECT t.tree_id, t.common_name, t.botanical_name, t.area
     FROM trees t
@@ -70,6 +74,7 @@ async function getMissingTrees() {
 }
 
 async function create(data) {
+  const pool = getPool();
   const {
     primary_tree_id, board_type = 'individual',
     status = 'Need to Fix', group_tree_ids = [],
@@ -98,6 +103,7 @@ async function create(data) {
 }
 
 async function update(id, data) {
+  const pool = getPool();
   const allowed = [
     'status', 'group_tree_ids', 'group_count', 'location_description',
     'area', 'installed_date', 'last_checked', 'installed_by', 'notes'
@@ -122,11 +128,13 @@ async function update(id, data) {
 }
 
 async function updateStatus(id, status) {
+  const pool = getPool();
   await pool.query('UPDATE tree_boards SET status = ? WHERE id = ?', [status, id]);
   return getById(id);
 }
 
 async function remove(id) {
+  const pool = getPool();
   await pool.query('DELETE FROM tree_boards WHERE id = ?', [id]);
 }
 
