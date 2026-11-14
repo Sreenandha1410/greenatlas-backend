@@ -72,6 +72,7 @@ app.use('/api/species', require('./routes/species'));
 app.use('/api/areas',   require('./routes/areas'));
 app.use('/api/auth',    require('./routes/auth'));
 app.use('/api/complaints', require('./routes/complaints'));
+app.use('/api/boards', require('./routes/boards'));
 
 // Centralized error handler
 app.use((err, req, res, next) => {
