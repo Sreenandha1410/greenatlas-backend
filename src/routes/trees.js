@@ -99,7 +99,8 @@ router.get('/export/table/:table', authMiddleware, async (req, res) => {
       'tree_images',
       'tree_location_history',
       'page_views',
-      'users'
+      'users',
+      'tree_boards'
     ];
 
     if (!ALLOWED_TABLES.includes(tableName)) {
@@ -184,7 +185,7 @@ router.get('/views', async (req, res) => {
 // POST /api/trees/views
 router.post('/views', async (req, res) => {
   try {
-    const count = await treeRepo.recordView(req.body.path || '/');
+    const count = await treeRepo.recordView(req.body);
     res.json({ count });
   } catch (err) {
     console.error('Record view error:', err);
