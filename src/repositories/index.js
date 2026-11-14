@@ -9,4 +9,5 @@ const treeRepo = require(`./${DB}/treeRepo`);
 const speciesRepo = require(`./${DB}/speciesRepo`);
 const areaRepo = require(`./${DB}/areaRepo`);
 const userRepo = require(`./${DB}/userRepo`);
-module.exports = { treeRepo, speciesRepo, areaRepo, userRepo };
+const boardRepo = require(`./${DB}/boardRepo`);
+module.exports = { treeRepo, speciesRepo, areaRepo, boardRepo };
