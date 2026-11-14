@@ -1,6 +1,6 @@
 const { getPool } = require('../../config/db');
 
-async function getAll({ status, type, area, search } = {}) {
+async function getAll({ status, type, area, search, flora_type } = {}) {
   const pool = getPool();
   const conditions = [];
   const values = [];
@@ -12,13 +12,19 @@ async function getAll({ status, type, area, search } = {}) {
     conditions.push('(b.board_id LIKE ? OR b.primary_tree_id LIKE ? OR t.common_name LIKE ? OR b.area LIKE ?)');
     values.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
   }
+  if (flora_type) {
+    conditions.push("COALESCE(s.flora_type, 'tree') = ?");
+    values.push(flora_type);
+  }
 
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
   const [rows] = await pool.query(`
-    SELECT b.*, t.common_name, t.botanical_name
+    SELECT b.*, t.common_name, t.botanical_name,
+           COALESCE(s.flora_type, 'tree') AS flora_type
     FROM tree_boards b
     LEFT JOIN trees t ON t.tree_id = b.primary_tree_id
+    LEFT JOIN species s ON t.botanical_name = CONCAT(s.genus, ' ', s.species)
     ${where}
     ORDER BY b.created_at DESC
   `, values);
@@ -34,9 +40,11 @@ async function getAll({ status, type, area, search } = {}) {
 async function getById(id) {
   const pool = getPool();
   const [rows] = await pool.query(`
-    SELECT b.*, t.common_name, t.botanical_name
+    SELECT b.*, t.common_name, t.botanical_name,
+           COALESCE(s.flora_type, 'tree') AS flora_type
     FROM tree_boards b
     LEFT JOIN trees t ON t.tree_id = b.primary_tree_id
+    LEFT JOIN species s ON t.botanical_name = CONCAT(s.genus, ' ', s.species)
     WHERE b.id = ?
   `, [id]);
   if (!rows[0]) return null;
@@ -65,12 +73,38 @@ async function getStats() {
 async function getMissingTrees() {
   const pool = getPool();
   const [rows] = await pool.query(`
-    SELECT t.tree_id, t.common_name, t.botanical_name, t.area
+    SELECT t.tree_id, t.common_name, t.botanical_name, t.area,
+           COALESCE(s.flora_type, 'tree') AS flora_type
     FROM trees t
+    LEFT JOIN species s ON t.botanical_name = CONCAT(s.genus, ' ', s.species)
     WHERE t.tree_id NOT IN (SELECT primary_tree_id FROM tree_boards)
     ORDER BY t.area, t.common_name
   `);
   return rows;
+}
+
+async function bulkCreate(treeIds) {
+  const pool = getPool();
+  if (!Array.isArray(treeIds) || !treeIds.length) {
+    return { created: 0, skipped: 0 };
+  }
+
+  const [result] = await pool.query(`
+    INSERT IGNORE INTO tree_boards (board_id, primary_tree_id, board_type, status, area, group_count)
+    SELECT
+      CONCAT('BRD-', t.tree_id),
+      t.tree_id,
+      'individual',
+      'Need to Fix',
+      t.area,
+      1
+    FROM trees t
+    WHERE t.tree_id IN (?)
+  `, [treeIds]);
+
+  const createdCount = result.affectedRows || 0;
+  const skippedCount = treeIds.length - createdCount;
+  return { created: createdCount, skipped: skippedCount };
 }
 
 async function create(data) {
@@ -115,6 +149,7 @@ async function update(id, data) {
     if (data[key] !== undefined) {
       let val = data[key];
       if (key === 'group_tree_ids') val = JSON.stringify(val);
+      if ((key === 'installed_date' || key === 'last_checked') && val === '') val = null;
       sets.push(`${key} = ?`);
       values.push(val);
     }
@@ -133,9 +168,33 @@ async function updateStatus(id, status) {
   return getById(id);
 }
 
+async function updateDates(id, { installed_date, last_checked }) {
+  const pool = getPool();
+  const sets = [];
+  const values = [];
+
+  if (installed_date !== undefined) {
+    sets.push('installed_date = ?');
+    values.push(installed_date || null);
+  }
+  if (last_checked !== undefined) {
+    sets.push('last_checked = ?');
+    values.push(last_checked || null);
+  }
+
+  if (!sets.length) return getById(id);
+
+  values.push(id);
+  await pool.query(`UPDATE tree_boards SET ${sets.join(', ')} WHERE id = ?`, values);
+  return getById(id);
+}
+
 async function remove(id) {
   const pool = getPool();
   await pool.query('DELETE FROM tree_boards WHERE id = ?', [id]);
 }
 
-module.exports = { getAll, getById, getStats, getMissingTrees, create, update, updateStatus, remove };
+module.exports = {
+  getAll, getById, getStats, getMissingTrees, bulkCreate,
+  create, update, updateStatus, updateDates, remove
+};
