@@ -366,9 +366,22 @@ const getGallery = async () => {
   return rows;
 };
 
-const recordView = async (path = '/') => {
+const recordView = async (data = {}) => {
   const pool = getPool();
-  await pool.query('INSERT INTO page_views (path) VALUES (?)', [path]);
+  const path = typeof data === 'string' ? data : (data.path || '/');
+  const device_type = data.device_type || 'desktop';
+  const browser = data.browser || 'Unknown';
+  const os = data.os || 'Unknown';
+  const source = data.source || 'web';
+  try {
+    await pool.query(
+      'INSERT INTO page_views (path, device_type, browser, os, source) VALUES (?, ?, ?, ?, ?)',
+      [path, device_type, browser, os, source]
+    );
+  } catch (err) {
+    // Safe fallback if migration was not run yet
+    await pool.query('INSERT INTO page_views (path) VALUES (?)', [path]);
+  }
   const [[row]] = await pool.query('SELECT COUNT(*) as count FROM page_views');
   return parseInt(row.count, 10);
 };
